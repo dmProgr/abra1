@@ -87,7 +87,7 @@ def run_command(offset, name, from_id, cmd):
 		msg = 'Ключ принят'
 		send_msg_id = send_text(from_id, msg, offset)
 		del currentUser[from_id]
-		#key = cmd
+		key = cmd
 		return
 	
 	elif cmd == 'start': # начало работы

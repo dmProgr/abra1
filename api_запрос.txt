@@ -5,6 +5,7 @@ response = requests.get(url)
 
 print(response.json()['ts'])
 
+изменения тут
 
 url = 'https://api.vk.com/method/messages.send?user_id=265498483&message=112233&v=5.50&access_token=ba777fbd7831e6fc3da8613dd838e2d14b76d8352e5f4aaf1693ccde23c1ee2f347f35d8a33d8291c701d'
 
