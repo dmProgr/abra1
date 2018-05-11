@@ -1,0 +1,89 @@
+{
+	"ts":"3",
+	"updates":[{
+		"type":"message_new",
+		"object":{
+			"id":2,
+			"date":1525941425,
+			"out":0,
+			"user_id":265498483,
+			"read_state":0,
+			"title":"",
+			"body":"привет, это Смайл"
+		},
+		"group_id":166256214
+	}]
+}
+	
+{"ts":"3",
+"updates":[
+{
+	"type":"message_new",
+	"object":
+	{
+		"id":1,
+		"date":1525940774,
+		"out":0,
+		"user_id":3414080,
+		"read_state":0,
+		"title":"",
+		"body":"привет"
+	},
+	"group_id":166256214
+},
+{
+	"type":"message_new",
+	"object":
+	{
+		"id":2,
+		"date":1525941425,
+		"out":0,
+		"user_id":265498483,
+		"read_state":0,
+		"title":"",
+		"body":"привет, это Смайл"
+	},
+	"group_id":166256214
+}]}
+
+сообщение от бота
+{"type":"message_reply",
+"object":{
+	"id":4,
+	"date":1525950650,
+	"out":1,
+	"user_id":265498483,
+	"read_state":0,
+	"title":"",
+	"body":"265498483",
+	"random_id":0},
+"group_id":166256214}
+
+ошибки обновления 
+
+{"failed":1,"ts":30}
+{"failed":2}
+{"failed":3}
+
+ответ на сообщение
+
+{"response":4}
+
+пересланное сообщение
+
+{"type":"message_new",
+"object":{
+	"id":30,
+	"date":1526021426,
+	"out":0,
+	"user_id":265498483,
+	"read_state":0,
+	"title":"",
+	"body":"пересланное сообщение",
+	"fwd_messages":[{
+		"user_id":100,
+		"date":1525940956,
+		"body":"Заявка на смену номера с ожиданием в 14 дней была Вами отменена."}]
+	},
+"group_id":166256214}
+
