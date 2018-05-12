@@ -3,6 +3,8 @@ import requests
 import time
 import os
 import json
+from re import findall                      # Импортируем библиотеку по работе с регулярными выражениями
+from subprocess import check_output         # Импортируем библиотеку по работе с внешними процессами
 
 # Переменным ADMIN_ID и TOKEN необходимо присвоить Вашим собственные значения
 INTERVAL = 3 # Интервал проверки наличия новых сообщений (обновлений) на сервере в секундах
@@ -20,48 +22,48 @@ print ('Start server...')
 def check_updates():
 	"""Проверка обновлений на сервере и инициация действий, в зависимости от команды"""
 	global offset
-	
-	
+
+
 	try:
 		request = requests.post('https://lp.vk.com/wh166256214?act=a_check&key=' + str(key) + '&ts=' + str(offset) + '&wait=25') # Отправка запроса обновлений
 		#request = requests.post(URL + TOKEN + '/getUpdates', data=data)
-		
+
 	except:
 		log_event('Error getting updates') # Логгируем ошибку
 		return False # Завершаем проверку
-	
-	
+
+
 	if not request.status_code == 200: return False # Проверка ответа сервера
-	
+
 	if 'failed' in request.json():
 		log_event('Ощибка токена : %s' % request.json())
 		initLongPollServer()
 		return False
-	
+
 	if not request.json()['updates']: return False # Проверка успешности обращения к API
 	#ToDo обработка ответа с ошибкой failed
-	
+
 	offset = request.json()['ts']
 	for update in request.json()['updates']: # Проверка каждого элемента списка
 		#offset = update['update_id'] # Извлечение ID сообщения
 		#если не сообщение пользователя, то пропускаем его
 		if update['type'] != 'message_new':
 				continue
-				
-				
+
+
 		# Ниже, если в обновлении отсутствует блок 'object'
 		# или же в блоке 'object' отсутствует блок 'body', тогда
 		if not 'object' in update or not 'body' in update['object']:
 			log_event('Unknown update: %s' % update) # сохраняем в лог пришедшее обновление
 			continue # и переходим к следующему обновлению
-		
+
 		msg_id = update['object']['id'] # Извлечение ID сообщения
-			
+
 		if update['object']['read_state'] == '1':
 			log_event('сообщение: %s прочитано' % msg_id)
-			continue #пропускаем прочитанные сообшения		
-		
-		
+			continue #пропускаем прочитанные сообшения
+
+
 		from_id = update['object']['user_id'] # Извлечение ID чата (отправителя)
 		name = 'userName' # Извлечение username отправителя
 		"""
@@ -72,40 +74,53 @@ def check_updates():
 		"""
 		message = update['object']['body'] # Извлечение текста сообщения
 		msgID = update['object']['id'] # Извлечение текста сообщения
-		
-		#ToDo помечать сообшения как прочитаные messages.markAsRead и загружать только прочитаные сообщения "read_state":1, как исполненные команды 
+
+		#ToDo помечать сообшения как прочитаные messages.markAsRead и загружать только прочитаные сообщения "read_state":1, как исполненные команды
 		#пометки messages.markAsRead не работают сообщения все равно остаются "read_state":0. Выход - сохранять ts при выходе
 		parameters = (msg_id, name, from_id, message.lower())
 		log_event('Message (id%s) from %s (id%s): "%s"' % parameters) # Вывод в лог ID и текста сообщения
 
 		# В зависимости от сообщения, выполняем необходимое действие
 		run_command(*parameters)
-        
+
 def run_command(offset, name, from_id, cmd):
 	global key
 	global currentUser
 	if from_id in currentUser:
 	#if from_id in currentUser and currentUser[from_id] == 'start':
+
 		navigateMenu(cmd, from_id)
 		if currentUser[from_id] == 1:
-			msg = 'М1\n'
+			msg = 'Меню 1\n1 - Меню 11\n2 - Меню 12'
+		elif currentUser[from_id] == 11:
+			msg = 'Меню 11\n1'
+		elif currentUser[from_id] == 12:
+			msg = 'Меню 12\n'
 		elif currentUser[from_id] == 2:
-			msg = 'М2\n'
+			msg = 'Меню 2\n1 - Меню 21\n2 - Меню 22'
+		elif currentUser[from_id] == 21:
+			msg = 'Меню 21\n'
+		elif currentUser[from_id] == 22:
+			msg = 'Меню 22\n'
 		elif currentUser[from_id] == 3:
-			msg = 'М3\n'
+			msg = 'Меню 3\n'
 		elif currentUser[from_id] == 0:
-			msg = 'Саао. До свда'
+			msg = menuStart()
+		elif currentUser[from_id] == 999:
+			msg = 'Спасибо, досвидание'
 			del currentUser[from_id]
-		else: 	
-			msg = 'chto to ne tak'
-			
-		#msg = 'Ключ принят'
-		send_msg_id = send_text(from_id, currentUser[from_id], offset)
+		else:
+			navigateMenu('9', from_id) # если нет обработчика такого пунта меню,
+			# то отбрасываем на уровень вверх
+			msg = 'Что то не так ' + str(currentUser[from_id])
+
+		msg = msg + '\n9 - Назад\n0 - Выход'
+		send_msg_id = send_text(from_id, msg, offset)
 		#send_msg_id = send_text(from_id, msg, offset)
 		#del currentUser[from_id]
 		#key = cmd
 		return
-	
+
 	elif cmd == 'start': # начало работы
 		currentUser[from_id] = 0
 		msg = menuStart()
@@ -113,12 +128,15 @@ def run_command(offset, name, from_id, cmd):
 	elif cmd == '/ping': # Ответ на ping
 		msg = 'pong'
 
+	elif cmd == '/temp': # Ответ на ping
+		msg = checkTemp()
+		
 	elif cmd == '/help': # Ответ на help
 		msg = 'No help today. Sorry.'
 
 	else:
 		msg = cmd
-		
+
 	send_msg_id = send_text(from_id, msg, offset) # Отправка ответа
 	log_event('Send text to' + str(from_id) + ', id=' + str(send_msg_id))
 	set_read_status2msg (offset) #помечаем сообщение как прочитаное
@@ -140,7 +158,7 @@ def send_text(chat_id, text, msgID):
 	if not request.status_code == 200: # Проверка ответа сервера
 		return False # Возврат с неудачей
 	return request.json()['response'] # Проверка успешности обращения к API
-	
+
 def set_read_status2msg (msg_id):
 	data = {'message_ids': msg_id, 'access_token': TOKEN, 'v': 5.50} # Формирование запроса
 	request = requests.post(URL + '/messages.markAsRead', data=data) # HTTP запрос
@@ -150,7 +168,7 @@ def saveSettings():
 	settings_file = open("settings.txt", "w")
 	settings_file.write(str(offset))
 	settings_file.close()
-	
+
 def getSettings():
 	global offset
 	if os.path.exists("settings.txt"):
@@ -168,20 +186,35 @@ def initLongPollServer():
 	key = response.json()['response']['key']
 	log_event('текущий ts: %s' % offset)
 
-def navigateMenu(digit, userId): 
+def navigateMenu(digit, userId):
 	global currentUser
 	inputint = int(digit)
-	
+
 	if inputint == 9:
 		currentUser[userId] = currentUser[userId] // 10
 	elif inputint == 0:
-		currentUser[userId] = 0
+		currentUser[userId] = 999
 	else:
 		currentUser[userId] = currentUser[userId] * 10 + inputint
 
 def menuStart():
 	return '1 - Меню 1\n2 - Меню 2\n3 - Меню 3\n0 - Выход'
 
+def isINT(a):
+	try:
+		int(a)
+		return True
+	except ValueError:
+		return False
+		
+def checkTemp():
+	try:
+		temp = check_output(["vcgencmd","measure_temp"]).decode()    # Выполняем запрос температуры
+		temp = float(findall('\d+\.\d+', temp)[0])                   # Извлекаем при помощи регулярного выражения значение температуры из строки "temp=47.8'C"
+	except:
+		temp = 'временно не поддерживается'
+	return temp
+	
 #getSettings()
 initLongPollServer()
 
