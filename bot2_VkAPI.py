@@ -88,7 +88,10 @@ def run_command(offset, name, from_id, cmd):
 	global currentUser
 	if from_id in currentUser:
 	#if from_id in currentUser and currentUser[from_id] == 'start':
-
+		if not isINT(cmd):
+			send_msg_id = send_text(from_id, 'Не верная команда', offset)
+			return
+			
 		navigateMenu(cmd, from_id)
 		if currentUser[from_id] == 1:
 			msg = 'Меню 1\n1 - Меню 11\n2 - Меню 12'
