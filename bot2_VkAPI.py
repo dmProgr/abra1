@@ -83,16 +83,32 @@ def check_updates():
         
 def run_command(offset, name, from_id, cmd):
 	global key
-	if from_id in currentUser and currentUser[from_id] == 'start':
-		msg = 'Ключ принят'
-		send_msg_id = send_text(from_id, msg, offset)
-		del currentUser[from_id]
-		key = cmd
+	global currentUser
+	if from_id in currentUser:
+	#if from_id in currentUser and currentUser[from_id] == 'start':
+		navigateMenu(cmd, from_id)
+		if currentUser[from_id] == 1:
+			msg = 'М1\n'
+		elif currentUser[from_id] == 2:
+			msg = 'М2\n'
+		elif currentUser[from_id] == 3:
+			msg = 'М3\n'
+		elif currentUser[from_id] == 0:
+			msg = 'Саао. До свда'
+			del currentUser[from_id]
+		else: 	
+			msg = 'chto to ne tak'
+			
+		#msg = 'Ключ принят'
+		send_msg_id = send_text(from_id, currentUser[from_id], offset)
+		#send_msg_id = send_text(from_id, msg, offset)
+		#del currentUser[from_id]
+		#key = cmd
 		return
 	
 	elif cmd == 'start': # начало работы
-		currentUser[from_id] = 'start'
-		msg = 'Приветствую! добро пожаловать!\nПриступим:\nВВеди новых ключ'
+		currentUser[from_id] = 0
+		msg = menuStart()
 
 	elif cmd == '/ping': # Ответ на ping
 		msg = 'pong'
@@ -152,6 +168,19 @@ def initLongPollServer():
 	key = response.json()['response']['key']
 	log_event('текущий ts: %s' % offset)
 
+def navigateMenu(digit, userId): 
+	global currentUser
+	inputint = int(digit)
+	
+	if inputint == 9:
+		currentUser[userId] = currentUser[userId] // 10
+	elif inputint == 0:
+		currentUser[userId] = 0
+	else:
+		currentUser[userId] = currentUser[userId] * 10 + inputint
+
+def menuStart():
+	return '1 - Меню 1\n2 - Меню 2\n3 - Меню 3\n0 - Выход'
 
 #getSettings()
 initLongPollServer()
