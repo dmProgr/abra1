@@ -19,6 +19,7 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setup(22, GPIO.OUT, initial=0)
 GPIO.setup(9, GPIO.OUT, initial=0) #задействуем как выход, что б получить 0
 
+room1 = False # состояние комнаты 1
 print ('Start server...')
 
 
@@ -90,7 +91,10 @@ def check_updates():
 def run_command(offset, name, from_id, cmd):
 	global key
 	global currentUser
+	global room1
+	
 	if from_id in currentUser:
+		
 	#if from_id in currentUser and currentUser[from_id] == 'start':
 		if not isINT(cmd):
 			send_msg_id = send_text(from_id, 'Не верная команда', offset)
@@ -103,20 +107,29 @@ def run_command(offset, name, from_id, cmd):
 			msg = 'Меню 11\n1'
 		elif currentUser[from_id] == 12:
 			msg = 'Меню 12\n'
-		elif currentUser[from_id] == 2:
-			msg = 'Меню 2\n1 - Меню 21\n2 - Меню 22'
-		elif currentUser[from_id] == 21:
-			msg = 'Меню 21\n'
-		elif currentUser[from_id] == 22:
-			msg = 'Меню 22\n'
+		elif currentUser[from_id] == 2 or currentUser[from_id] == 21:
+			if cmd == '1': #если пришла команда на отключение/включение
+				room1 = off_on_swith(room1)
+				navigateMenu('9', from_id) #возвращаем на верх
+			
+			msg = 'Комната\n Свет - '
+			if room1:
+				msg = msg + 'Включен\n1 - Отключить свет'
+			else:
+				msg = msg + 'Отключен\n1 - Включить свет'
+			msg = msg + '\n'
+			
+			
+		#elif currentUser[from_id] == 21:
+			#msg = 'Меню 21\n'
 		elif currentUser[from_id] == 3:
-                        GPIO.output(22, 0)
-                        msg = 'Демонстрация работы выходов:\n22 - ВЫХОД\n3.3V\n9 - 0V\nСейчас 22 выход - 0V\n'
-                        msg = mag + 'Можно померить относительно +3.3В\n1 - активировать 22 выход'
+			GPIO.output(22, 0)
+			msg = 'Демонстрация работы выходов:\n22 - ВЫХОД\n3.3V\n9 - 0V\nСейчас 22 выход - 0V\n'
+			msg = msg + 'Можно померить относительно +3.3В\n1 - активировать 22 выход'
 		elif currentUser[from_id] == 31:
 			GPIO.output(22, GPIO.HIGH)
 			msg = 'Демонстрация работы выходов:\n22 - ВЫХОД\n3.3V\n9 - 0V\n'
-			msg = mag + 'Сейчас 22 выход активен 3.3В\nМожно померить относительно 9 выхода (0В)'
+			msg = msg + 'Сейчас 22 выход активен 3.3В\nМожно померить относительно 9 выхода (0В)'
 		elif currentUser[from_id] == 0:
 			msg = menuStart()
 		elif currentUser[from_id] == 999:
@@ -211,7 +224,7 @@ def navigateMenu(digit, userId):
 		currentUser[userId] = currentUser[userId] * 10 + inputint
 
 def menuStart():
-	return '1 - Меню 1\n2 - Меню 2\n3 - Меню 3\n0 - Выход'
+	return '1 - Меню 1\n2 - Комната\n3 - Демонстрация работы выходов\n0 - Выход'
 
 def isINT(a):
 	try:
@@ -227,7 +240,10 @@ def checkTemp():
 	except:
 		temp = 'временно не поддерживается'
 	return temp
-	
+
+def off_on_swith(swith):
+	return not swith
+
 #getSettings()
 initLongPollServer()
 
@@ -237,7 +253,7 @@ if __name__ == "__main__":
 			check_updates()
 			time.sleep(INTERVAL)
 		except KeyboardInterrupt:
-                        GPIO.cleanup()
-                        saveSettings()
-                        print ('Прервано пользователем..')
-                        break
+			GPIO.cleanup()
+			saveSettings()
+			print ('Прервано пользователем..')
+			break
