@@ -5,6 +5,7 @@ import os
 import json
 from re import findall                      # Импортируем библиотеку по работе с регулярными выражениями
 from subprocess import check_output         # Импортируем библиотеку по работе с внешними процессами
+import RPi.GPIO as GPIO
 
 # Переменным ADMIN_ID и TOKEN необходимо присвоить Вашим собственные значения
 INTERVAL = 3 # Интервал проверки наличия новых сообщений (обновлений) на сервере в секундах
@@ -14,6 +15,9 @@ TOKEN = 'ba777fbd7831e6fc3da8613dd838e2d14b76d8352e5f4aaf1693ccde23c1ee2f347f35d
 offset = 1  #ID последнего полученного обновления
 key = '0' #текщий токен доступа
 currentUser = {} #словарь, {'user': 'действие'} последовальтельности действий
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(22, GPIO.OUT, initial=0)
+GPIO.setup(9, GPIO.OUT, initial=0) #задействуем как выход, что б получить 0
 
 print ('Start server...')
 
@@ -106,11 +110,17 @@ def run_command(offset, name, from_id, cmd):
 		elif currentUser[from_id] == 22:
 			msg = 'Меню 22\n'
 		elif currentUser[from_id] == 3:
-			msg = 'Меню 3\n'
+                        GPIO.output(22, 0)
+                        msg = 'Демонстрация работы выходов:\n22 - ВЫХОД\n3.3V\n9 - 0V\nСейчас 22 выход - 0V\n'
+                        msg = mag + 'Можно померить относительно +3.3В\n1 - активировать 22 выход'
+		elif currentUser[from_id] == 31:
+			GPIO.output(22, GPIO.HIGH)
+			msg = 'Демонстрация работы выходов:\n22 - ВЫХОД\n3.3V\n9 - 0V\n'
+			msg = mag + 'Сейчас 22 выход активен 3.3В\nМожно померить относительно 9 выхода (0В)'
 		elif currentUser[from_id] == 0:
 			msg = menuStart()
 		elif currentUser[from_id] == 999:
-			msg = 'Спасибо, досвидание'
+			msg = 'Спасибо, до свидания'
 			del currentUser[from_id]
 		else:
 			navigateMenu('9', from_id) # если нет обработчика такого пунта меню,
@@ -227,6 +237,7 @@ if __name__ == "__main__":
 			check_updates()
 			time.sleep(INTERVAL)
 		except KeyboardInterrupt:
-			saveSettings()
-			print ('Прервано пользователем..')
-			break
+                        GPIO.cleanup()
+                        saveSettings()
+                        print ('Прервано пользователем..')
+                        break
