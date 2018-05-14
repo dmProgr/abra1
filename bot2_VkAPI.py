@@ -5,19 +5,26 @@ import os
 import json
 from re import findall                      # Импортируем библиотеку по работе с регулярными выражениями
 from subprocess import check_output         # Импортируем библиотеку по работе с внешними процессами
-import RPi.GPIO as GPIO
 
+try:
+	import RPi.GPIO as GPIO
+	G_P_I_O = True
+except:
+	G_P_I_O = False
+	
 # Переменным ADMIN_ID и TOKEN необходимо присвоить Вашим собственные значения
 INTERVAL = 3 # Интервал проверки наличия новых сообщений (обновлений) на сервере в секундах
-ADMIN_ID = 421056069 # ID пользователя. Комманды от других пользователей выполняться не будут
+ADMIN_ID = (3414080, 265498483) # кортеж (неизменяемый список)ID пользователя. Комманды от других пользователей выполняться не будут
 URL = 'https://api.vk.com/method' # Адрес HTTP Bot API
 TOKEN = 'ba777fbd7831e6fc3da8613dd838e2d14b76d8352e5f4aaf1693ccde23c1ee2f347f35d8a33d8291c701d' # Ключ авторизации для Вашего бота
 offset = 1  #ID последнего полученного обновления
 key = '0' #текщий токен доступа
 currentUser = {} #словарь, {'user': 'действие'} последовальтельности действий
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(22, GPIO.OUT, initial=0)
-GPIO.setup(9, GPIO.OUT, initial=0) #задействуем как выход, что б получить 0
+
+if G_P_I_O:
+	GPIO.setmode(GPIO.BCM)
+	GPIO.setup(22, GPIO.OUT, initial=0)
+	GPIO.setup(9, GPIO.OUT, initial=0) #задействуем как выход, что б получить 0
 
 room1 = False # состояние комнаты 1
 print ('Start server...')
@@ -71,12 +78,14 @@ def check_updates():
 
 		from_id = update['object']['user_id'] # Извлечение ID чата (отправителя)
 		name = 'userName' # Извлечение username отправителя
-		"""
-		if from_id != ADMIN_ID: # Если отправитель не является администратором, то
-			send_text("You're not autorized to use me!", from_id) # ему отправляется соответствующее уведомление
+		print (from_id)
+		print (ADMIN_ID)
+		print (from_id in ADMIN_ID)
+		if not from_id in ADMIN_ID: # Если отправитель не является администратором, то
+			send_text(from_id, "You're not autorized to use me!", msg_id) # ему отправляется соответствующее уведомление
 			log_event('Unautorized: %s' % update) # обновление записывается в лог
 			continue # и цикл переходит к следующему обновлению
-		"""
+		
 		message = update['object']['body'] # Извлечение текста сообщения
 		msgID = update['object']['id'] # Извлечение текста сообщения
 
@@ -102,15 +111,15 @@ def run_command(offset, name, from_id, cmd):
 			
 		navigateMenu(cmd, from_id)
 		if currentUser[from_id] == 1:
-			msg = 'Меню 1\n1 - Меню 11\n2 - Меню 12'
+			msg = 'Меню 1\n1 - Меню 11\n2 - Меню 12\n'
 		elif currentUser[from_id] == 11:
-			msg = 'Меню 11\n1'
+			msg = 'Меню 11\n'
 		elif currentUser[from_id] == 12:
 			msg = 'Меню 12\n'
 		elif currentUser[from_id] == 2 or currentUser[from_id] == 21:
 			if cmd == '1': #если пришла команда на отключение/включение
 				room1 = off_on_swith(room1)
-				navigateMenu('9', from_id) #возвращаем на верх
+				navigateMenu('9', from_id) #возвращаем наверх
 			
 			msg = 'Комната\n Свет - '
 			if room1:
@@ -123,24 +132,31 @@ def run_command(offset, name, from_id, cmd):
 		#elif currentUser[from_id] == 21:
 			#msg = 'Меню 21\n'
 		elif currentUser[from_id] == 3:
-			GPIO.output(22, 0)
-			msg = 'Демонстрация работы выходов:\n22 - ВЫХОД\n3.3V\n9 - 0V\nСейчас 22 выход - 0V\n'
-			msg = msg + 'Можно померить относительно +3.3В\n1 - активировать 22 выход'
+			if G_P_I_O:
+				GPIO.output(22, 0)
+				msg = 'Демонстрация работы выходов:\n22 - ВЫХОД\n3.3V\n9 - 0V\nСейчас 22 выход - 0V\n'
+				msg = msg + 'Можно померить относительно +3.3В\n1 - активировать 22 выход\n'
+			else:
+				msg = 'Демонстрация работы выходов временно недоступна\n'
+				msg = msg + menuStart()
+				navigateMenu('9', from_id) #возвращаем наверх
 		elif currentUser[from_id] == 31:
 			GPIO.output(22, GPIO.HIGH)
 			msg = 'Демонстрация работы выходов:\n22 - ВЫХОД\n3.3V\n9 - 0V\n'
-			msg = msg + 'Сейчас 22 выход активен 3.3В\nМожно померить относительно 9 выхода (0В)'
+			msg = msg + 'Сейчас 22 выход активен 3.3В\nМожно померить относительно 9 выхода (0В)\n'
 		elif currentUser[from_id] == 0:
 			msg = menuStart()
 		elif currentUser[from_id] == 999:
 			msg = 'Спасибо, до свидания'
 			del currentUser[from_id]
+			send_msg_id = send_text(from_id, msg, offset)
+			return
 		else:
 			navigateMenu('9', from_id) # если нет обработчика такого пунта меню,
 			# то отбрасываем на уровень вверх
-			msg = 'Что то не так ' + str(currentUser[from_id])
+			msg = 'Что то не так\n'
 
-		msg = msg + '\n9 - Назад\n0 - Выход'
+		msg = msg + backEndMenu()
 		send_msg_id = send_text(from_id, msg, offset)
 		#send_msg_id = send_text(from_id, msg, offset)
 		#del currentUser[from_id]
@@ -149,7 +165,7 @@ def run_command(offset, name, from_id, cmd):
 
 	elif cmd == 'start': # начало работы
 		currentUser[from_id] = 0
-		msg = menuStart()
+		msg = menuStart() + backEndMenu()
 
 	elif cmd == '/ping': # Ответ на ping
 		msg = 'pong'
@@ -224,7 +240,14 @@ def navigateMenu(digit, userId):
 		currentUser[userId] = currentUser[userId] * 10 + inputint
 
 def menuStart():
-	return '1 - Меню 1\n2 - Комната\n3 - Демонстрация работы выходов\n0 - Выход'
+	return '''
+1 - Меню 1
+2 - Комната
+3 - Демонстрация работы выходов
+'''
+
+def backEndMenu():
+	return '9 - Назад\n0 - Выход\n'
 
 def isINT(a):
 	try:
@@ -253,7 +276,8 @@ if __name__ == "__main__":
 			check_updates()
 			time.sleep(INTERVAL)
 		except KeyboardInterrupt:
-			GPIO.cleanup()
+			if G_P_I_O:
+				GPIO.cleanup()
 			saveSettings()
 			print ('Прервано пользователем..')
 			break
