@@ -23,8 +23,8 @@ currentUser = {} #словарь, {'user': 'действие'} последов�
 
 if G_P_I_O:
 	GPIO.setmode(GPIO.BCM)
-	GPIO.setup(22, GPIO.OUT, initial=0)
-	GPIO.setup(9, GPIO.OUT, initial=0) #задействуем как выход, что б получить 0
+	GPIO.setup(17, GPIO.OUT, initial=0)
+	#GPIO.setup(9, GPIO.OUT, initial=0) #задействуем как выход, что б получить 0
 
 room1 = False # состояние комнаты 1
 print ('Start server...')
@@ -121,11 +121,13 @@ def run_command(offset, name, from_id, cmd):
 				room1 = off_on_swith(room1)
 				navigateMenu('9', from_id) #возвращаем наверх
 			
-			msg = 'Комната\n Свет - '
+			msg = 'Вентилятор - '
 			if room1:
-				msg = msg + 'Включен\n1 - Отключить свет'
+				GPIO.output(17, 1)
+				msg = msg + 'Включен\n1 - Отключить вентилятор'
 			else:
-				msg = msg + 'Отключен\n1 - Включить свет'
+				GPIO.output(17, 0)
+				msg = msg + 'Отключен\n1 - Включить вентилятор'
 			msg = msg + '\n'
 			
 			
@@ -133,7 +135,7 @@ def run_command(offset, name, from_id, cmd):
 			#msg = 'Меню 21\n'
 		elif currentUser[from_id] == 3:
 			if G_P_I_O:
-				GPIO.output(22, 0)
+				GPIO.output(17, 0)
 				msg = 'Демонстрация работы выходов:\n22 - ВЫХОД\n3.3V\n9 - 0V\nСейчас 22 выход - 0V\n'
 				msg = msg + 'Можно померить относительно +3.3В\n1 - активировать 22 выход\n'
 			else:
@@ -141,7 +143,7 @@ def run_command(offset, name, from_id, cmd):
 				msg = msg + menuStart()
 				navigateMenu('9', from_id) #возвращаем наверх
 		elif currentUser[from_id] == 31:
-			GPIO.output(22, GPIO.HIGH)
+			GPIO.output(17, GPIO.HIGH)
 			msg = 'Демонстрация работы выходов:\n22 - ВЫХОД\n3.3V\n9 - 0V\n'
 			msg = msg + 'Сейчас 22 выход активен 3.3В\nМожно померить относительно 9 выхода (0В)\n'
 		elif currentUser[from_id] == 0:
@@ -242,7 +244,7 @@ def navigateMenu(digit, userId):
 def menuStart():
 	return '''
 1 - Меню 1
-2 - Комната
+2 - Вентилятор
 3 - Демонстрация работы выходов
 '''
 
