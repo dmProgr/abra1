@@ -187,7 +187,7 @@ def run_command(offset, name, from_id, cmd):
 	else:
 		msg = cmd
 
-	send_msg_id = send_text(from_id, msg, offset) # Отправка ответа
+	#send_msg_id = send_text(from_id, msg, offset) # Отправка ответа
 	log_event('Send text to' + str(from_id) + ', id=' + str(send_msg_id))
 	set_read_status2msg (offset) #помечаем сообщение как прочитаное
 
@@ -276,12 +276,12 @@ def off_on_swith(swith):
 	return not swith
 
 def showMenu(from_id, dictMenu, offset, parent): #{'pos':1,	'name':'меню 1',  'func':'fun1', 'parent': 0}
-	msg = ''
+	m = ''
 	for key in dictMenu:
 		if key['parent'] == parent:
-			msg = msg + key['name']
+			m = m + key['name'] + '\n'
 	
-	send_text(from_id, msg, offset)
+	send_text(from_id, m, offset)
 	
 
 #getSettings()
