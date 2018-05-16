@@ -20,6 +20,7 @@ TOKEN = 'ba777fbd7831e6fc3da8613dd838e2d14b76d8352e5f4aaf1693ccde23c1ee2f347f35d
 offset = 1  #ID последнего полученного обновления
 key = '0' #текщий токен доступа
 currentUser = {} #словарь, {'user': 'действие'} последовальтельности действий
+set = dict.fromkeys(['msgId', 'userId']) #рабочие настройки, создаем ключи set['msgId'] и set['userId']
 
 if G_P_I_O:
 	GPIO.setmode(GPIO.BCM)
@@ -35,6 +36,7 @@ print ('Start server...')
 def check_updates():
 	"""Проверка обновлений на сервере и инициация действий, в зависимости от команды"""
 	global offset
+	global set
 
 
 	try:
@@ -69,20 +71,18 @@ def check_updates():
 			log_event('Unknown update: %s' % update) # сохраняем в лог пришедшее обновление
 			continue # и переходим к следующему обновлению
 
-		msg_id = update['object']['id'] # Извлечение ID сообщения
+		set['msgId'] = update['object']['id'] # Извлечение ID сообщения
 
 		if update['object']['read_state'] == '1':
-			log_event('сообщение: %s прочитано' % msg_id)
+			log_event('сообщение: %s прочитано' % set['msgId'])
 			continue #пропускаем прочитанные сообшения
 
 
-		from_id = update['object']['user_id'] # Извлечение ID чата (отправителя)
+		set['userId'] = from_id = update['object']['user_id'] # Извлечение ID чата (отправителя)
 		name = 'userName' # Извлечение username отправителя
-		print (from_id)
-		print (ADMIN_ID)
-		print (from_id in ADMIN_ID)
-		if not from_id in ADMIN_ID: # Если отправитель не является администратором, то
-			send_text(from_id, "You're not autorized to use me!", msg_id) # ему отправляется соответствующее уведомление
+		
+		if not set['userId'] in ADMIN_ID: # Если отправитель не является администратором, то
+			send_text("You're not autorized to use me!") # ему отправляется соответствующее уведомление
 			log_event('Unautorized: %s' % update) # обновление записывается в лог
 			continue # и цикл переходит к следующему обновлению
 		
@@ -91,7 +91,7 @@ def check_updates():
 
 		#ToDo помечать сообшения как прочитаные messages.markAsRead и загружать только прочитаные сообщения "read_state":1, как исполненные команды
 		#пометки messages.markAsRead не работают сообщения все равно остаются "read_state":0. Выход - сохранять ts при выходе
-		parameters = (msg_id, name, from_id, message.lower())
+		parameters = (set['msgId'], name, set['userId'], message.lower())
 		log_event('Message (id%s) from %s (id%s): "%s"' % parameters) # Вывод в лог ID и текста сообщения
 
 		# В зависимости от сообщения, выполняем необходимое действие
@@ -101,15 +101,15 @@ def run_command(offset, name, from_id, cmd):
 	global key
 	global currentUser
 	global room1
+	from_id = set['userId']
 	
-	if from_id in currentUser:
+	if set['userId'] in currentUser:
 		
-	#if from_id in currentUser and currentUser[from_id] == 'start':
 		if not isINT(cmd):
-			send_msg_id = send_text(from_id, 'Не верная команда', offset)
+			send_msg_id = send_text('Не верная команда')
 			return
 			
-		navigateMenu(cmd, from_id)
+		navigateMenu(cmd)
 		if currentUser[from_id] == 1:
 			msg = 'Меню 1\n1 - Меню 11\n2 - Меню 12\n'
 		elif currentUser[from_id] == 11:
@@ -119,7 +119,7 @@ def run_command(offset, name, from_id, cmd):
 		elif currentUser[from_id] == 2 or currentUser[from_id] == 21:
 			if cmd == '1': #если пришла команда на отключение/включение
 				room1 = off_on_swith(room1)
-				navigateMenu('9', from_id) #возвращаем наверх
+				navigateMenu('9') #возвращаем наверх
 			
 			msg = 'Вентилятор - '
 			if room1:
@@ -141,7 +141,7 @@ def run_command(offset, name, from_id, cmd):
 			else:
 				msg = 'Демонстрация работы выходов временно недоступна\n'
 				msg += menuStart()
-				navigateMenu('9', from_id) #возвращаем наверх
+				navigateMenu('9') #возвращаем наверх
 		elif currentUser[from_id] == 31:
 			GPIO.output(22, GPIO.HIGH)
 			msg = 'Демонстрация работы выходов:\n22 - ВЫХОД\n3.3V\n9 - 0V\n'
@@ -151,16 +151,15 @@ def run_command(offset, name, from_id, cmd):
 		elif currentUser[from_id] == 999:
 			msg = 'Спасибо, до свидания'
 			del currentUser[from_id]
-			send_msg_id = send_text(from_id, msg, offset)
+			send_msg_id = send_text(msg)
 			return
 		else:
-			navigateMenu('9', from_id) # если нет обработчика такого пунта меню,
+			navigateMenu('9') # если нет обработчика такого пунта меню,
 			# то отбрасываем на уровень вверх
 			msg = 'Что то не так\n'
 
 		msg = msg + backEndMenu()
-		send_msg_id = send_text(from_id, msg, offset)
-		#send_msg_id = send_text(from_id, msg, offset)
+		send_msg_id = send_text(msg)
 		#del currentUser[from_id]
 		#key = cmd
 		return
@@ -181,8 +180,8 @@ def run_command(offset, name, from_id, cmd):
 	else:
 		msg = cmd
 
-	send_msg_id = send_text(from_id, msg, offset) # Отправка ответа
-	log_event('Send text to' + str(from_id) + ', id=' + str(send_msg_id))
+	send_msg_id = send_text(msg) # Отправка ответа
+	log_event('Send text to' + str(set['userId']) + ', id=' + str(send_msg_id))
 	set_read_status2msg (offset) #помечаем сообщение как прочитаное
 
 def log_event(text):
@@ -193,11 +192,11 @@ def log_event(text):
     event = '%s >> %s' % (time.ctime(), text)
     print (event)
 
-def send_text(chat_id, text, msgID):
+def send_text(text):
 	"""Отправка текстового сообщения по chat_id
 	ToDo: повторная отправка при неудаче"""
-	log_event('Sending to %s: %s' % (chat_id, text)) # Запись события в лог
-	data = {'user_id': chat_id, 'message': text, 'forward_messages': msgID, 'access_token': TOKEN, 'v': 5.50} # Формирование запроса
+	log_event('Sending to %s: %s' % (set['userId'], text)) # Запись события в лог
+	data = {'user_id': set['userId'], 'message': text, 'forward_messages': set['msgId'], 'access_token': TOKEN, 'v': 5.50} # Формирование запроса
 	request = requests.post(URL + '/messages.send', data=data) # HTTP запрос
 	if not request.status_code == 200: # Проверка ответа сервера
 		return False # Возврат с неудачей
@@ -208,17 +207,19 @@ def set_read_status2msg (msg_id):
 	request = requests.post(URL + '/messages.markAsRead', data=data) # HTTP запрос
 
 def saveSettings():
-	global offset
-	settings_file = open("settings.txt", "w")
-	settings_file.write(str(offset))
-	settings_file.close()
+	data = {'off': offset,
+			'swith1': room1}
+	with open('settings.json', 'w', encoding='utf-8') as fh: #открываем файл на запись
+		fh.write(json.dumps(data, ensure_ascii=False)) #преобразовываем словарь data в unicode-строку и записываем в файл
 
 def getSettings():
 	global offset
-	if os.path.exists("settings.txt"):
-		settings_file = open("settings.txt")
-		offset = settings_file.read()
-		settings_file.close()
+	global room1
+	if os.path.exists("settings.json"):
+		with open('data.json', 'r', encoding='utf-8') as fh: #открываем файл на чтение
+			dataRead = json.load(fh) #загружаем из файла данные в словарь data
+	offset = dataRead['off']
+	room1 = dataRead['swith1']
 
 
 def initLongPollServer():
@@ -230,16 +231,19 @@ def initLongPollServer():
 	key = response.json()['response']['key']
 	log_event('текущий ts: %s' % offset)
 
-def navigateMenu(digit, userId):
+def navigateMenu(digit):
 	global currentUser
 	inputint = int(digit)
-
+	userStatus = currentUser[set['userId']]
+	
 	if inputint == 9:
-		currentUser[userId] = currentUser[userId] // 10
+		userStatus = userStatus // 10
 	elif inputint == 0:
-		currentUser[userId] = 999
+		userStatus = 999
 	else:
-		currentUser[userId] = currentUser[userId] * 10 + inputint
+		userStatus = userStatus * 10 + inputint
+		
+	currentUser[set['userId']] = userStatus
 
 def menuStart():
 	return '''
