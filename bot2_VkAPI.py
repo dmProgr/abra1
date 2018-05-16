@@ -18,28 +18,13 @@ ADMIN_ID = (3414080, 265498483) # кортеж (неизменяемый спи�
 URL = 'https://api.vk.com/method' # Адрес HTTP Bot API
 TOKEN = 'ba777fbd7831e6fc3da8613dd838e2d14b76d8352e5f4aaf1693ccde23c1ee2f347f35d8a33d8291c701d' # Ключ авторизации для Вашего бота
 offset = 1  #ID последнего полученного обновления
-msg_id = '' #id команды
-from_id = '' #id отправителя команды
-message = '' #команда
 key = '0' #текщий токен доступа
 currentUser = {} #словарь, {'user': 'действие'} последовальтельности действий
 
-# меню
-dict_menu = {
-			0:{'pos':0,	'name':'Главное меню',  'func':'foo', 'parent': 998},
-			1: {'pos':1,	'name':'меню 1',  'func':'foo', 'parent': 0},
-				11: {'pos':1,	'name':'меню 11',  'func':'foo', 'parent': 1},
-					115: {'pos':5,	'name':'меню 115',  'func':'foo', 'parent': 11},
-				12: {'pos':2,	'name':'меню 12',  'func':'foo', 'parent': 1},
-			2: {'pos':2,	'name':'меню 2',  'func':'foo', 'parent': 0},
-				21: {'pos':1,	'name':'меню 21',  'func':'foo', 'parent': 2},
-				22: {'pos':2,	'name':'меню 22',  'func':'foo', 'parent': 2},			
-			3: {'pos':3,	'name':'Вентилятор',  'func':'vent', 'parent': 0},			
-			999: {'pos':999,	'name':'Спасибо, до свидания',  'func':'exit999', 'parent': 998},
-			}
 if G_P_I_O:
 	GPIO.setmode(GPIO.BCM)
 	GPIO.setup(17, GPIO.OUT, initial=0)
+	#GPIO.setup(22, GPIO.OUT, initial=0)
 	#GPIO.setup(9, GPIO.OUT, initial=0) #задействуем как выход, что б получить 0
 
 room1 = False # состояние комнаты 1
@@ -50,10 +35,8 @@ print ('Start server...')
 def check_updates():
 	"""Проверка обновлений на сервере и инициация действий, в зависимости от команды"""
 	global offset
-	global msg_id
-	global from_id
-	global message
-	
+
+
 	try:
 		request = requests.post('https://lp.vk.com/wh166256214?act=a_check&key=' + str(key) + '&ts=' + str(offset) + '&wait=25') # Отправка запроса обновлений
 		#request = requests.post(URL + TOKEN + '/getUpdates', data=data)
@@ -75,11 +58,10 @@ def check_updates():
 
 	offset = request.json()['ts']
 	for update in request.json()['updates']: # Проверка каждого элемента списка
-		#offset = update['update_id'] # Извлечение ID сообщения
+	
 		#если не сообщение пользователя, то пропускаем его
 		if update['type'] != 'message_new':
 				continue
-
 
 		# Ниже, если в обновлении отсутствует блок 'object'
 		# или же в блоке 'object' отсутствует блок 'body', тогда
@@ -93,9 +75,12 @@ def check_updates():
 			log_event('сообщение: %s прочитано' % msg_id)
 			continue #пропускаем прочитанные сообшения
 
+
 		from_id = update['object']['user_id'] # Извлечение ID чата (отправителя)
 		name = 'userName' # Извлечение username отправителя
-		
+		print (from_id)
+		print (ADMIN_ID)
+		print (from_id in ADMIN_ID)
 		if not from_id in ADMIN_ID: # Если отправитель не является администратором, то
 			send_text(from_id, "You're not autorized to use me!", msg_id) # ему отправляется соответствующее уведомление
 			log_event('Unautorized: %s' % update) # обновление записывается в лог
@@ -116,17 +101,15 @@ def run_command(offset, name, from_id, cmd):
 	global key
 	global currentUser
 	global room1
-	msg = ''
+	
 	if from_id in currentUser:
+		
+	#if from_id in currentUser and currentUser[from_id] == 'start':
 		if not isINT(cmd):
 			send_msg_id = send_text(from_id, 'Не верная команда', offset)
 			return
 			
 		navigateMenu(cmd, from_id)
-		send_msg_id = showMenu(from_id, offset, currentUser[from_id])
-		doFunc(from_id, offset, currentUser[from_id])
-		#eval(a)()
-		"""
 		if currentUser[from_id] == 1:
 			msg = 'Меню 1\n1 - Меню 11\n2 - Меню 12\n'
 		elif currentUser[from_id] == 11:
@@ -140,28 +123,29 @@ def run_command(offset, name, from_id, cmd):
 			
 			msg = 'Вентилятор - '
 			if room1:
-				GPIO.output(17, 1)
+				if G_P_I_O: GPIO.output(17, 1)
 				msg = msg + 'Включен\n1 - Отключить вентилятор'
 			else:
-				GPIO.output(17, 0)
+				if G_P_I_O: GPIO.output(17, 0)
 				msg = msg + 'Отключен\n1 - Включить вентилятор'
-			msg = msg + '\n'			
+			msg = msg + '\n'
 			
+			
+		#elif currentUser[from_id] == 21:
+			#msg = 'Меню 21\n'
 		elif currentUser[from_id] == 3:
 			if G_P_I_O:
-				GPIO.output(17, 0)
+				GPIO.output(22, 0)
 				msg = 'Демонстрация работы выходов:\n22 - ВЫХОД\n3.3V\n9 - 0V\nСейчас 22 выход - 0V\n'
-				msg = msg + 'Можно померить относительно +3.3В\n1 - активировать 22 выход\n'
+				msg += 'Можно померить относительно +3.3В\n1 - активировать 22 выход\n'
 			else:
 				msg = 'Демонстрация работы выходов временно недоступна\n'
-				msg = msg + menuStart()
+				msg += menuStart()
 				navigateMenu('9', from_id) #возвращаем наверх
-				
 		elif currentUser[from_id] == 31:
-			GPIO.output(17, GPIO.HIGH)
+			GPIO.output(22, GPIO.HIGH)
 			msg = 'Демонстрация работы выходов:\n22 - ВЫХОД\n3.3V\n9 - 0V\n'
 			msg = msg + 'Сейчас 22 выход активен 3.3В\nМожно померить относительно 9 выхода (0В)\n'
-			
 		elif currentUser[from_id] == 0:
 			msg = menuStart()
 		elif currentUser[from_id] == 999:
@@ -176,13 +160,14 @@ def run_command(offset, name, from_id, cmd):
 
 		msg = msg + backEndMenu()
 		send_msg_id = send_text(from_id, msg, offset)
-		"""
+		#send_msg_id = send_text(from_id, msg, offset)
+		#del currentUser[from_id]
+		#key = cmd
 		return
 
 	elif cmd == 'start': # начало работы
 		currentUser[from_id] = 0
-		#msg = menuStart() + backEndMenu()
-		send_msg_id = showMenu(from_id, offset, 0)
+		msg = menuStart() + backEndMenu()
 
 	elif cmd == '/ping': # Ответ на ping
 		msg = 'pong'
@@ -195,10 +180,8 @@ def run_command(offset, name, from_id, cmd):
 
 	else:
 		msg = cmd
-	
-	if msg != '':
-		send_msg_id = send_text(from_id, msg, offset) # Отправка ответа
-	print('ggggg')
+
+	send_msg_id = send_text(from_id, msg, offset) # Отправка ответа
 	log_event('Send text to' + str(from_id) + ', id=' + str(send_msg_id))
 	set_read_status2msg (offset) #помечаем сообщение как прочитаное
 
@@ -285,50 +268,6 @@ def checkTemp():
 
 def off_on_swith(swith):
 	return not swith
-
-#отображение меню из словаря dict_menu. В зависимости от переданного пользователей parent, выбирает из словаря и формирует список 
-def showMenu(from_id, offset, position): #{1: 'pos':1,	'name':'меню 1',  'func':'fun1', 'parent': 0}
-	m = ''
-	i=0
-	for key, value in dict_menu.items():
-		if key == position: m += value['name'] + '\n'
-		if value['parent'] == position:
-			i+=1
-			m += str(value['pos']) + ' - ' + value['name'] + '\n'
-	m += '''9 - Назад
-	0 - Выход'''
-	
-	if not position in dict_menu: m = 'Что то не так\n'
-	return send_text(from_id, m, offset)
-
-#запуск функции, привязанной к соответствующему пункту меню
-def doFunc(from_id, offset, position):
-	if position in dict_menu:
-		eval(dict_menu[position]['func'])(from_id)
-	else:
-		navigateMenu('9', from_id) # если нет обработчика такого пунта меню
-		#return send_text(from_id, 'что то не так', offset)
-
-def foo(from_id):
-	print ('1111')
-	
-def exit999(from_id):
-	del currentUser[from_id]
-	
-def vent(from_id):
-	global room1
-	if message == '1': #если пришла команда на отключение/включение
-			room1 = off_on_swith(room1)
-			navigateMenu('9', from_id) #возвращаем наверх
-	msg = 'Вентилятор - '
-	if room1:
-		#GPIO.output(17, 1)
-		msg = msg + 'Включен\n1 - Отключить вентилятор'
-	else:
-		#GPIO.output(17, 0)
-		msg = msg + 'Отключен\n1 - Включить вентилятор'
-	msg = msg + '\n'			
-	send_text(from_id, msg, msg_id)
 
 #getSettings()
 initLongPollServer()
